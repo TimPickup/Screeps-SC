@@ -1,162 +1,165 @@
-module.exports.init = function(){
-    $.getScript("https://craig.global.ssl.fastly.net/js/mousetrap/mousetrap.min.js?bc893", function() {
-         module.exports.update();
-    });    
-}
+/**
+ * Adds new console controls
+ * - custom buttons, with custom commands, using current room, selected object id and x,y mouse coords
+ */
+module.exports.init = function () {
+  $.getScript("https://craig.global.ssl.fastly.net/js/mousetrap/mousetrap.min.js?bc893", function () {
+    module.exports.update();
+  });
+};
 
-module.exports.update = function(){
-    module.getScopeData("console", "Console", [], function(Console){
-
-        // Create Remove Button
-        $(`<button id="sc-btn-remove-icon" class="md-primary md-hue-1 md-button md-ink-ripple" type="button" title="Remove last added icon" style="position: absolute;bottom: 0px;display: block;">
+module.exports.update = function () {
+  module.getScopeData("console", "Console", [], function (Console) {
+    // Create Remove Button
+    $(`<button id="sc-btn-remove-icon" class="md-primary md-hue-1 md-button md-ink-ripple" type="button" title="Remove last added icon" style="position: absolute;bottom: 0px;display: block;">
             <i class="fa fa-minus"></i>
             <div class="md-ripple-container"></div>
-        </button>`).appendTo($('.console-controls'));
+        </button>`).appendTo($(".console-controls"));
 
-        $('#sc-btn-remove-icon').click(function() { 
-            module.exports.removeIcon();
-        });
+    $("#sc-btn-remove-icon").click(function () {
+      module.exports.removeIcon();
+    });
 
-        // Create Add Button
-        $(`<button id="sc-btn-add-icon" class="md-primary md-hue-1 md-button md-ink-ripple" type="button" title="Add new icon"  style="position: absolute;bottom: 32px;display: block;">
+    // Create Add Button
+    $(`<button id="sc-btn-add-icon" class="md-primary md-hue-1 md-button md-ink-ripple" type="button" title="Add new icon"  style="position: absolute;bottom: 32px;display: block;">
             <i class="fa fa-plus"></i>
             <div class="md-ripple-container"></div>
-        </button>`).appendTo($('.console-controls'));
+        </button>`).appendTo($(".console-controls"));
 
-        $('#sc-btn-add-icon').click(function() { 
-            module.exports.openModal();
-        });
-
-        // Get saved custom icons and load them into page
-        var scCustomIconString = localStorage.getItem('scCustomIcons');
-
-        if (scCustomIconString){
-            var scCustomIconArr = JSON.parse(scCustomIconString);
-
-            for(var i = 0; i < scCustomIconArr.length; i++){
-                var obj = scCustomIconArr[i];
-
-                module.exports.createNewIconButton(obj.id, obj.icon, obj.code, obj.keybinding);
-
-            }
-        }
+    $("#sc-btn-add-icon").click(function () {
+      module.exports.openModal();
     });
-}
 
-module.exports.createNewIconButton = function(id, icon, code, keybinding){
-    if (!document.getElementById(id)){
+    // Get saved custom icons and load them into page
+    var scCustomIconString = localStorage.getItem("scCustomIcons");
 
-        if (code){
-            code = code.replace(/(["])/g, "&quot;");
-        }
-        
+    if (scCustomIconString) {
+      var scCustomIconArr = JSON.parse(scCustomIconString);
 
-        var newBtnString = `<button id="${id}" class="md-primary md-hue-1 md-button md-ink-ripple" type="button" title="${code}">
+      for (var i = 0; i < scCustomIconArr.length; i++) {
+        var obj = scCustomIconArr[i];
+
+        module.exports.createNewIconButton(obj.id, obj.icon, obj.code, obj.keybinding);
+      }
+    }
+  });
+};
+
+module.exports.createNewIconButton = function (id, icon, code, keybinding) {
+  if (!document.getElementById(id)) {
+    if (code) {
+      code = code.replace(/(["])/g, "&quot;");
+    }
+
+    var newBtnString = `<button id="${id}" class="md-primary md-hue-1 md-button md-ink-ripple" type="button" title="${code}">
             <i class="fa ${icon}"></i>
             <div class="md-ripple-container"></div>
-        </button>`
+        </button>`;
 
-        var newBtn = $(newBtnString);
+    var newBtn = $(newBtnString);
 
-        newBtn.insertBefore($('#sc-btn-add-icon'));
+    newBtn.insertBefore($("#sc-btn-add-icon"));
 
-        $(`#${id}`).unbind('click');
+    $(`#${id}`).unbind("click");
 
-        newBtn.click(function() { 
-            var consoleScope = angular.element(document.getElementsByClassName('console ng-scope')).scope().Console;
-            var command = $(this).attr("title");
+    newBtn.click(function () {
+      var consoleScope = angular.element(document.getElementsByClassName("console ng-scope")).scope().Console;
+      var command = $(this).attr("title");
 
-            if (command.includes('#{room}')){
-                var scope = angular.element(document.getElementsByClassName('room ng-scope')).scope();
+      if (command.includes("#{room}")) {
+        var scope = angular.element(document.getElementsByClassName("room ng-scope")).scope();
 
-                if (scope && scope.Room && scope.Room.roomName){
-                    let roomName = angular.element(document.getElementsByClassName('room ng-scope')).scope().Room.roomName;
-                    command = command.replace(/#\{room\}/g, roomName);
-                }else{
-                    command = `console.log("Error couldn't fetch room name for code: ${command} ")`;
-                }
-            }
-
-            if (command.includes('#{id}')){
-                var scope = angular.element(document.getElementsByClassName('room ng-scope')).scope();
-
-                if (scope && scope.Room && scope.Room.selectedObject && scope.Room.selectedObject._id){
-                    let id = angular.element(document.getElementsByClassName('room ng-scope')).scope().Room.selectedObject._id;
-                    command = command.replace(/#\{id\}/g, id);
-                }else{
-                    command = `console.log("Error couldn't fetch id for code: ${command} ")`;
-                }
-            }
-
-            if (command.includes('#{x}') || command.includes('#{y}')){
-                var scope = angular.element(document.getElementsByClassName('room ng-scope')).scope();
-
-                if (scope && scope.Room && scope.Room.cursorPos){
-                    let obj = angular.element(document.getElementsByClassName('room ng-scope')).scope().Room.cursorPos;
-                    command = command.replace(/#\{x\}/g, obj.x);
-                    command = command.replace(/#\{y\}/g, obj.y);
-                }else{
-                    command = `console.log("Error couldn't fetch coordinates for code: ${command} ")`;
-                }
-            }
-
-            consoleScope.aceOptions.onChange([undefined, {
-                val: command, 
-                getValue: function(){
-                    return this.val;
-                }, 
-                setValue: function(v){
-                    this.val = v;
-                }, 
-                navigateLineEnd: function(){
-                    return true
-                }
-            }]);
-
-            consoleScope.sendCommand();
-        });
-
-        if (Mousetrap && keybinding){
-            var m = undefined;
-
-            if (window.scMousetrap){
-                m = window.scMousetrap;
-            }else{
-                m = new Mousetrap();
-                window.scMousetrap = m;
-            }
-
-            m.unbind(keybinding).bind(keybinding, function(e) {
-                $(`#${id}`).click();
-            });
+        if (scope && scope.Room && scope.Room.roomName) {
+          let roomName = angular.element(document.getElementsByClassName("room ng-scope")).scope().Room.roomName;
+          command = command.replace(/#\{room\}/g, roomName);
+        } else {
+          command = `console.log("Error couldn't fetch room name for code: ${command} ")`;
         }
-    }
-}
+      }
 
-module.exports.removeIcon = function(){
-    var elements = $('button[id^="sc-btn-custom-"]');
+      if (command.includes("#{id}")) {
+        var scope = angular.element(document.getElementsByClassName("room ng-scope")).scope();
 
-    if (elements.length){
-        var element = elements[elements.length - 1];
-        var scCustomIcons = localStorage.getItem('scCustomIcons');
-        var arr = [];
-
-        if (scCustomIcons){
-            var arr = JSON.parse(scCustomIcons);
+        if (scope && scope.Room && scope.Room.selectedObject && scope.Room.selectedObject._id) {
+          let id = angular.element(document.getElementsByClassName("room ng-scope")).scope().Room.selectedObject._id;
+          command = command.replace(/#\{id\}/g, id);
+        } else {
+          command = `console.log("Error couldn't fetch id for code: ${command} ")`;
         }
+      }
 
-        arr = arr.filter(function( obj ) {
-            return obj.id !== element.id;
-        });
+      if (command.includes("#{x}") || command.includes("#{y}")) {
+        var scope = angular.element(document.getElementsByClassName("room ng-scope")).scope();
 
-        localStorage.setItem('scCustomIcons', JSON.stringify(arr));
+        if (scope && scope.Room && scope.Room.cursorPos) {
+          let obj = angular.element(document.getElementsByClassName("room ng-scope")).scope().Room.cursorPos;
+          command = command.replace(/#\{x\}/g, obj.x);
+          command = command.replace(/#\{y\}/g, obj.y);
+        } else {
+          command = `console.log("Error couldn't fetch coordinates for code: ${command} ")`;
+        }
+      }
 
-        $(element).remove();
+      consoleScope.aceOptions.onChange([
+        undefined,
+        {
+          val: command,
+          getValue: function () {
+            return this.val;
+          },
+          setValue: function (v) {
+            this.val = v;
+          },
+          navigateLineEnd: function () {
+            return true;
+          }
+        }
+      ]);
+
+      consoleScope.sendCommand();
+    });
+
+    if (Mousetrap && keybinding) {
+      var m = undefined;
+
+      if (window.scMousetrap) {
+        m = window.scMousetrap;
+      } else {
+        m = new Mousetrap();
+        window.scMousetrap = m;
+      }
+
+      m.unbind(keybinding).bind(keybinding, function (e) {
+        $(`#${id}`).click();
+      });
     }
-}
+  }
+};
 
-module.exports.openModal = function(){
-    $(`<div id="sc-modal-icon" class="fade modal in" modal-window="" index="0" style="display: block; z-index: 1049;" tabindex="-1">
+module.exports.removeIcon = function () {
+  var elements = $('button[id^="sc-btn-custom-"]');
+
+  if (elements.length) {
+    var element = elements[elements.length - 1];
+    var scCustomIcons = localStorage.getItem("scCustomIcons");
+    var arr = [];
+
+    if (scCustomIcons) {
+      var arr = JSON.parse(scCustomIcons);
+    }
+
+    arr = arr.filter(function (obj) {
+      return obj.id !== element.id;
+    });
+
+    localStorage.setItem("scCustomIcons", JSON.stringify(arr));
+
+    $(element).remove();
+  }
+};
+
+module.exports.openModal = function () {
+  $(`<div id="sc-modal-icon" class="fade modal in" modal-window="" index="0" style="display: block; z-index: 1049;" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content" modal-window-content="">
                 <section class="dlg-flag">
@@ -235,53 +238,52 @@ module.exports.openModal = function(){
                 </section>
             </div>
         </div>
-    </div>`).appendTo('body');
+    </div>`).appendTo("body");
 
-    $('<div id="sc-modal-background" class="modal-backdrop fade in" style="z-index: 1040;"></div>').appendTo('body');
+  $('<div id="sc-modal-background" class="modal-backdrop fade in" style="z-index: 1040;"></div>').appendTo("body");
 
-    $('#sc-modal-icon-cancel').click(function() { 
-        module.exports.closeModal();
-    });
+  $("#sc-modal-icon-cancel").click(function () {
+    module.exports.closeModal();
+  });
 
-    $('#sc-modal-dismiss').click(function() { 
-        module.exports.closeModal();
-    });
+  $("#sc-modal-dismiss").click(function () {
+    module.exports.closeModal();
+  });
 
-    $('#sc-modal-icon-ok').click(function() { 
-        var icon = $('#sc-modal-icon-input').val();
-        var code = $('#sc-modal-icon-code').val();
-        var keybinding = $('#sc-modal-icon-keybinding').val();
+  $("#sc-modal-icon-ok").click(function () {
+    var icon = $("#sc-modal-icon-input").val();
+    var code = $("#sc-modal-icon-code").val();
+    var keybinding = $("#sc-modal-icon-keybinding").val();
 
-        var id = "sc-btn-custom-" + icon;
+    var id = "sc-btn-custom-" + icon;
 
-        if (document.getElementById(id)){
-            var index = 0;
-            var newId = "";
-            do{
-                newId = id + "-" + index++;
-            }
-            while(document.getElementById(newId));
+    if (document.getElementById(id)) {
+      var index = 0;
+      var newId = "";
+      do {
+        newId = id + "-" + index++;
+      } while (document.getElementById(newId));
 
-            id = newId;
-        }
+      id = newId;
+    }
 
-        var scCustomIcons = localStorage.getItem('scCustomIcons');
-        var arr = [];
+    var scCustomIcons = localStorage.getItem("scCustomIcons");
+    var arr = [];
 
-        if (scCustomIcons){
-            var arr = JSON.parse(scCustomIcons);
-        }
+    if (scCustomIcons) {
+      var arr = JSON.parse(scCustomIcons);
+    }
 
-        arr.push({id: id, icon: icon, code: code, keybinding: keybinding});
-        localStorage.setItem('scCustomIcons', JSON.stringify(arr));
+    arr.push({ id: id, icon: icon, code: code, keybinding: keybinding });
+    localStorage.setItem("scCustomIcons", JSON.stringify(arr));
 
-        module.exports.createNewIconButton(id, icon, code, keybinding);
+    module.exports.createNewIconButton(id, icon, code, keybinding);
 
-        module.exports.closeModal();
-    });
-}
+    module.exports.closeModal();
+  });
+};
 
-module.exports.closeModal = function(){
-    $('#sc-modal-icon').remove(); 
-    $('#sc-modal-background').remove(); 
-}
+module.exports.closeModal = function () {
+  $("#sc-modal-icon").remove();
+  $("#sc-modal-background").remove();
+};

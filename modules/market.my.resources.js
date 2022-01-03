@@ -1,47 +1,48 @@
-module.exports.init = function(){
-    module.exports.base = ['energy','power','H','O','U','L','K','Z','X'];
-    module.exports.tier1 = ['OH','ZK','UL','G','UH','UO','KH','KO','LH','LO','ZH','ZO','GH','GO'];
-    module.exports.tier2 = ['UH2O','UHO2','KH2O','KHO2','LH2O','LHO2','ZH2O','ZHO2','GH2O','GHO2'];
-    module.exports.tier3 = ['XUH2O','XUHO2','XKH2O','XKHO2','XLH2O','XLHO2','XZH2O','XZHO2','XGH2O','XGHO2'];
+/**
+ * Supposed to render content of your own rooms, e.g. fetches storages & terminals.
+ */
+module.exports.init = function () {
+  module.exports.base = ["energy", "power", "H", "O", "U", "L", "K", "Z", "X"];
+  module.exports.tier1 = ["OH", "ZK", "UL", "G", "UH", "UO", "KH", "KO", "LH", "LO", "ZH", "ZO", "GH", "GO"];
+  module.exports.tier2 = ["UH2O", "UHO2", "KH2O", "KHO2", "LH2O", "LHO2", "ZH2O", "ZHO2", "GH2O", "GHO2"];
+  module.exports.tier3 = ["XUH2O", "XUHO2", "XKH2O", "XKHO2", "XLH2O", "XLHO2", "XZH2O", "XZHO2", "XGH2O", "XGHO2"];
 
-    var userid = JSON.parse(localStorage.getItem('users.code.activeWorld'))[0]._id;
+  var userid = JSON.parse(localStorage.getItem("users.code.activeWorld"))[0]._id;
 
-    module.ajaxGet("https://screeps.com/api/user/rooms?id=" + userid, function(data, error){
-        if (data && data.shards){
-            module.exports.shards = data.shards;
-        }else{
-            module.exports.shards = {};
-            module.exports.shards.shards = {};
-            console.error(data || error);
-        }
-
-        $('body').on('click', `.market-controls > button`, function () {
-            module.exports.fetchResources();
-        });
-
-        module.exports.update();
-    });    
-}
-
-module.exports.update = function(){
-
-    if (window.location.href.startsWith("https://screeps.com/a/#!/market/all/")){
-        module.getScopeData("market-all-orders", "AllOrders", [], function(AllOrders){
-            var orgFunc = AllOrders.onShardChange;
-            AllOrders.onShardChange = function(){
-                module.exports.fetchResources();
-                orgFunc();
-            }
-        });
+  module.ajaxGet("https://screeps.com/api/user/rooms?id=" + userid, function (data, error) {
+    if (data && data.shards) {
+      module.exports.shards = data.shards;
+    } else {
+      module.exports.shards = {};
+      module.exports.shards.shards = {};
+      console.error(data || error);
     }
-    
-    module.getScopeData("market", "$parent", [], function(){
 
-        if (!document.getElementById('sc-my-resources')){
-            var svg = module.exports.getLoadingSVG();
+    $("body").on("click", `.market-controls > button`, function () {
+      module.exports.fetchResources();
+    });
 
-            var bodyElement = 
-            $(`<div id="sc-my-resources" style="padding:30px 0 10px 30px;"><div style="font-size: 15px;">My resources:</div>
+    module.exports.update();
+  });
+};
+
+module.exports.update = function () {
+  if (window.location.href.startsWith("https://screeps.com/a/#!/market/all/")) {
+    module.getScopeData("market-all-orders", "AllOrders", [], function (AllOrders) {
+      var orgFunc = AllOrders.onShardChange;
+      AllOrders.onShardChange = function () {
+        module.exports.fetchResources();
+        orgFunc();
+      };
+    });
+  }
+
+  module.getScopeData("market", "$parent", [], function () {
+    if (!document.getElementById("sc-my-resources")) {
+      var svg = module.exports.getLoadingSVG();
+
+      var bodyElement =
+        $(`<div id="sc-my-resources" style="padding:30px 0 10px 30px;"><div style="font-size: 15px;">My resources:</div>
                 <select id="sc-dropdown" style="border-color: transparent;background: #444;color: #ccc;">
                   <option value="None">None</option>
                   <option value="Storage & Terminal" selected>Storage & Terminal</option>
@@ -70,92 +71,92 @@ module.exports.update = function(){
                 </div>
             </div>
             </div>`);
-            
-            var savedDrop = localStorage.getItem('scMarketDropdown');
-            if (savedDrop){
-                var dropdownElement = bodyElement.find('#sc-dropdown');
-                dropdownElement.val(savedDrop);
 
-                if (savedDrop == "None"){
-                    bodyElement.find('#container4').hide();
-                }
-            }
-            
-            for(let i = 0; i < module.exports.base.length; i++){
-                bodyElement.find('#col1').append(module.exports.getTabElement(module.exports.base[i]));
-            }
+      var savedDrop = localStorage.getItem("scMarketDropdown");
+      if (savedDrop) {
+        var dropdownElement = bodyElement.find("#sc-dropdown");
+        dropdownElement.val(savedDrop);
 
-            for(let i = 0; i < module.exports.tier1.length; i++){
-                bodyElement.find('#col2').append(module.exports.getTabElement(module.exports.tier1[i]));
-            }
-
-            for(let i = 0; i < module.exports.tier2.length; i++){
-                bodyElement.find('#col3').append(module.exports.getTabElement(module.exports.tier2[i]));
-            }
-
-            for(let i = 0; i < module.exports.tier3.length; i++){
-                bodyElement.find('#col4').append(module.exports.getTabElement(module.exports.tier3[i]));
-            }
-
-            $('.market.ng-scope > div:nth-child(1)').after(bodyElement);
-
-            module.exports.listenToConsole();
-
-            $(window).on('hashchange', function(e){
-                var inMarketPage = window.location.href.startsWith('https://screeps.com/a/#!/market/');
-
-                if (!inMarketPage){
-                    $(window).off('hashchange');
-                    module.exports.closeSocket();
-                }
-                
-            });
-
-            $('body').on('change', '#sc-dropdown', function () {
-                if (this.value == "None"){
-                    $('#container4').hide();
-                }else{
-                    $('#container4').show();
-                    module.exports.fetchResources();
-                }
-                localStorage.setItem('scMarketDropdown', this.value);
-            });
+        if (savedDrop == "None") {
+          bodyElement.find("#container4").hide();
         }
+      }
 
-        if (!window.SCresources){
+      for (let i = 0; i < module.exports.base.length; i++) {
+        bodyElement.find("#col1").append(module.exports.getTabElement(module.exports.base[i]));
+      }
 
-            if (window.location.href === 'https://screeps.com/a/#!/market/all'){
-                var verifyFunc = function(){
-                    var allOrdersScope = angular.element(document.getElementsByClassName('market-all-orders ng-scope')).scope();
+      for (let i = 0; i < module.exports.tier1.length; i++) {
+        bodyElement.find("#col2").append(module.exports.getTabElement(module.exports.tier1[i]));
+      }
 
-                    if (allOrdersScope && allOrdersScope.AllOrders && allOrdersScope.AllOrders.resources && allOrdersScope.AllOrders.resources && Object.keys(allOrdersScope.AllOrders.resources).length > 0){
-                        return true;
-                    }
+      for (let i = 0; i < module.exports.tier2.length; i++) {
+        bodyElement.find("#col3").append(module.exports.getTabElement(module.exports.tier2[i]));
+      }
 
-                    return false;
-                }
-                var delayFunc = function(){
-                    var allOrdersScope = angular.element(document.getElementsByClassName('market-all-orders ng-scope')).scope();
-                    if (!window.SCresources){
-                        window.resources = allOrdersScope.AllOrders.resources;
-                    }
-                    
-                    
-                }
+      for (let i = 0; i < module.exports.tier3.length; i++) {
+        bodyElement.find("#col4").append(module.exports.getTabElement(module.exports.tier3[i]));
+      }
 
-                module.wait(verifyFunc, 50, delayFunc);
-            }
+      $(".market.ng-scope > div:nth-child(1)").after(bodyElement);
+
+      module.exports.listenToConsole();
+
+      $(window).on("hashchange", function (e) {
+        var inMarketPage = window.location.href.startsWith("https://screeps.com/a/#!/market/");
+
+        if (!inMarketPage) {
+          $(window).off("hashchange");
+          module.exports.closeSocket();
         }
+      });
 
+      $("body").on("change", "#sc-dropdown", function () {
+        if (this.value == "None") {
+          $("#container4").hide();
+        } else {
+          $("#container4").show();
+          module.exports.fetchResources();
+        }
+        localStorage.setItem("scMarketDropdown", this.value);
+      });
+    }
 
-    });
-}
+    if (!window.SCresources) {
+      if (window.location.href === "https://screeps.com/a/#!/market/all") {
+        var verifyFunc = function () {
+          var allOrdersScope = angular.element(document.getElementsByClassName("market-all-orders ng-scope")).scope();
 
-module.exports.getTabElement = function(resource){
-    var amount = 0;
-    var shard = module.getCurrentShard() || "shard0";
+          if (
+            allOrdersScope &&
+            allOrdersScope.AllOrders &&
+            allOrdersScope.AllOrders.resources &&
+            allOrdersScope.AllOrders.resources &&
+            Object.keys(allOrdersScope.AllOrders.resources).length > 0
+          ) {
+            return true;
+          }
 
-    var tabElementText = `<a id="sc-${resource}" class="market-resource" href="https://screeps.com/a/#!/market/all/${shard}/${resource}" style="background: #333;padding: 8px 10px;margin-top: 3px;display: flex;justify-content: space-between;font-size: 14px;cursor: pointer;text-decoration: none;color: #eee;" onmouseover="this.style.backgroundColor='#444'" onmouseout="this.style.backgroundColor='#333'">
+          return false;
+        };
+        var delayFunc = function () {
+          var allOrdersScope = angular.element(document.getElementsByClassName("market-all-orders ng-scope")).scope();
+          if (!window.SCresources) {
+            window.resources = allOrdersScope.AllOrders.resources;
+          }
+        };
+
+        module.wait(verifyFunc, 50, delayFunc);
+      }
+    }
+  });
+};
+
+module.exports.getTabElement = function (resource) {
+  var amount = 0;
+  var shard = module.getCurrentShard() || "shard0";
+
+  var tabElementText = `<a id="sc-${resource}" class="market-resource" href="https://screeps.com/a/#!/market/all/${shard}/${resource}" style="background: #333;padding: 8px 10px;margin-top: 3px;display: flex;justify-content: space-between;font-size: 14px;cursor: pointer;text-decoration: none;color: #eee;" onmouseover="this.style.backgroundColor='#444'" onmouseout="this.style.backgroundColor='#333'">
         <div class="resource-name">
         <img src="https://s3.amazonaws.com/static.screeps.com/upload/mineral-icons/${resource}.png" style="margin-right: 3px;">
         </div>
@@ -164,164 +165,167 @@ module.exports.getTabElement = function(resource){
               <use xlink:href="#sc-svg-loading">
             </svg>
         </div>
-        </a>`
+        </a>`;
 
-    var obj = $(tabElementText);
+  var obj = $(tabElementText);
 
-    $('body').on('click', `#sc-${resource}`, function () {
-        setTimeout(function() {
-            var scope = angular.element(document.getElementsByClassName('market-all-orders-resource ng-scope')).scope();
-            if (scope && scope.ResourceOrders){
-                $('.resource-header.ng-binding > img').attr("src", `https://s3.amazonaws.com/static.screeps.com/upload/mineral-icons/${resource}.png`)
-                if (window.resources){
-                    scope.ResourceOrders.resourceName = window.resources[resource];
-                }else{
-                    scope.ResourceOrders.resourceName = resource;
-                }
-                
-                scope.ResourceOrders.reload();
-            }
-        }, 50);
-    });
-
-    return $(tabElementText);
-}
-
-module.exports.setRoomDropdown = function(rooms){
-    var roomInputField = $('.orders-table__target-room.ng-scope > md-input-container > input');
-    console.log("trying to set rooms");
-
-    if (roomInputField.length > 0){
-        if (!roomInputField.attr('list')){
-            roomInputField.attr('list', 'sc-roomList');
-            roomInputField.attr('autocomplete', 'off');
-            var roomString = "";
-
-            for(let i in rooms){
-                var roomName = rooms[i];
-
-                roomString += `<option label='${roomName}' value='${roomName}'>`
-            }
-
-            $('#sc-roomList').remove();
-            roomInputField.after($(`<datalist id='sc-roomList'>${roomString}</datalist>`))
+  $("body").on("click", `#sc-${resource}`, function () {
+    setTimeout(function () {
+      var scope = angular.element(document.getElementsByClassName("market-all-orders-resource ng-scope")).scope();
+      if (scope && scope.ResourceOrders) {
+        $(".resource-header.ng-binding > img").attr(
+          "src",
+          `https://s3.amazonaws.com/static.screeps.com/upload/mineral-icons/${resource}.png`
+        );
+        if (window.resources) {
+          scope.ResourceOrders.resourceName = window.resources[resource];
+        } else {
+          scope.ResourceOrders.resourceName = resource;
         }
+
+        scope.ResourceOrders.reload();
+      }
+    }, 50);
+  });
+
+  return $(tabElementText);
+};
+
+module.exports.setRoomDropdown = function (rooms) {
+  var roomInputField = $(".orders-table__target-room.ng-scope > md-input-container > input");
+  console.log("trying to set rooms");
+
+  if (roomInputField.length > 0) {
+    if (!roomInputField.attr("list")) {
+      roomInputField.attr("list", "sc-roomList");
+      roomInputField.attr("autocomplete", "off");
+      var roomString = "";
+
+      for (let i in rooms) {
+        var roomName = rooms[i];
+
+        roomString += `<option label='${roomName}' value='${roomName}'>`;
+      }
+
+      $("#sc-roomList").remove();
+      roomInputField.after($(`<datalist id='sc-roomList'>${roomString}</datalist>`));
     }
-}
+  }
+};
 
-module.exports.updateResourceAmount = function(){
-    if (window.SCMarket){
-        var flag = localStorage.getItem('scMarketDropdown');
-        var sum = {}
-        console.log(sum);
+module.exports.updateResourceAmount = function () {
+  if (window.SCMarket) {
+    var flag = localStorage.getItem("scMarketDropdown");
+    var sum = {};
+    console.log(sum);
 
-        $('div[id^="sc-val-"]').html("0");
+    $('div[id^="sc-val-"]').html("0");
 
-        for(let roomName in window.SCMarket){
-            let room = window.SCMarket[roomName];
+    for (let roomName in window.SCMarket) {
+      let room = window.SCMarket[roomName];
 
-            if (flag == "Storage & Terminal" || flag == "Storage"){
-                for (let mineral in room.storage){
-                    if (!sum[mineral]){
-                        sum[mineral] = 0;
-                    }
+      if (flag == "Storage & Terminal" || flag == "Storage") {
+        for (let mineral in room.storage) {
+          if (!sum[mineral]) {
+            sum[mineral] = 0;
+          }
 
-                    if (room.storage[mineral]){
-                        sum[mineral] += room.storage[mineral]
-                    }
-                }
-            }
-
-            if (flag == "Storage & Terminal" || flag == "Terminal"){
-                for (let mineral in room.terminal){
-                    if (!sum[mineral]){
-                        sum[mineral] = 0;
-                    }
-
-                    if (room.terminal[mineral]){
-                        sum[mineral] += room.terminal[mineral]
-                    }
-                }
-            }
+          if (room.storage[mineral]) {
+            sum[mineral] += room.storage[mineral];
+          }
         }
+      }
 
-        for(let mineral in sum){
-            if (sum[mineral] > 0){
-                var l10nEN = new Intl.NumberFormat("en-US");
-                var amount = l10nEN.format(sum[mineral]);
-                $(`#sc-val-${mineral}`).text(amount);
-            }
+      if (flag == "Storage & Terminal" || flag == "Terminal") {
+        for (let mineral in room.terminal) {
+          if (!sum[mineral]) {
+            sum[mineral] = 0;
+          }
+
+          if (room.terminal[mineral]) {
+            sum[mineral] += room.terminal[mineral];
+          }
         }
-
-        module.exports.setRoomDropdown(Object.keys(window.SCMarket));
+      }
     }
-}
 
-module.exports.fetchResources = function(){
-    var command = 'console.log("<script>window.SCMarket="+(function(){var a={};for(var b in Game.rooms){var c=Game.rooms[b];c&&c.controller&&c.controller.my&&c.controller.level>=4&&(a[b]={},a[b].storage=c.storage?c.storage.store:{},a[b].terminal=c.terminal?c.terminal.store:{})}return JSON.stringify(a)})()+"</script>");console.log("Module fetched storages & terminals.");'
-    
-    $('div[id^="sc-val-"]').html(`<svg class="uil-ellipsis" height="20px" preserveaspectratio="xMidYMid" viewbox="0 0 100 100" width="20px" xmlns="http://www.w3.org/2000/svg">
+    for (let mineral in sum) {
+      if (sum[mineral] > 0) {
+        var l10nEN = new Intl.NumberFormat("en-US");
+        var amount = l10nEN.format(sum[mineral]);
+        $(`#sc-val-${mineral}`).text(amount);
+      }
+    }
+
+    module.exports.setRoomDropdown(Object.keys(window.SCMarket));
+  }
+};
+
+module.exports.fetchResources = function () {
+  var command =
+    'console.log("<script>window.SCMarket="+(function(){var a={};for(var b in Game.rooms){var c=Game.rooms[b];c&&c.controller&&c.controller.my&&c.controller.level>=4&&(a[b]={},a[b].storage=c.storage?c.storage.store:{},a[b].terminal=c.terminal?c.terminal.store:{})}return JSON.stringify(a)})()+"</script>");console.log("Module fetched storages & terminals.");';
+
+  $('div[id^="sc-val-"]')
+    .html(`<svg class="uil-ellipsis" height="20px" preserveaspectratio="xMidYMid" viewbox="0 0 100 100" width="20px" xmlns="http://www.w3.org/2000/svg">
           <use xlink:href="#sc-svg-loading">
         </svg>`);
 
-    var shardSelect = $("button > span > span:contains('Shard:') > b");
+  var shardSelect = $("button > span > span:contains('Shard:') > b");
 
-    module.sendConsoleCommand(command, undefined, shardSelect ? shardSelect.text() : undefined);
-}
+  module.sendConsoleCommand(command, undefined, shardSelect ? shardSelect.text() : undefined);
+};
 
-module.exports.listenToConsole = function(){
-    var auth = JSON.parse(localStorage.getItem('auth'));
-    var userid = JSON.parse(localStorage.getItem('users.code.activeWorld'))[0]._id;
-    var host = "wss://screeps.com/socket/websocket"
+module.exports.listenToConsole = function () {
+  var auth = JSON.parse(localStorage.getItem("auth"));
+  var userid = JSON.parse(localStorage.getItem("users.code.activeWorld"))[0]._id;
+  var host = "wss://screeps.com/socket/websocket";
 
-    module.exports.socket = new WebSocket(host);
+  module.exports.socket = new WebSocket(host);
 
-    module.exports.socket.onopen = function(){
-        module.exports.socket.send("auth " + auth);
-    }
+  module.exports.socket.onopen = function () {
+    module.exports.socket.send("auth " + auth);
+  };
 
-    module.exports.socket.onmessage = function(msg){
-        if (msg.data.indexOf("auth ok") > -1){
-            console.log("sending subscribe to console");
+  module.exports.socket.onmessage = function (msg) {
+    if (msg.data.indexOf("auth ok") > -1) {
+      console.log("sending subscribe to console");
 
-            var subscribe = "subscribe user:" + userid +"/console";
-            module.exports.socket.send(subscribe);
+      var subscribe = "subscribe user:" + userid + "/console";
+      module.exports.socket.send(subscribe);
+    } else if (msg.data.indexOf("SCMarket") > -1) {
+      var data = JSON.parse(msg.data);
+      var logArray = data[1].messages.log;
+      logArray.forEach(function (log) {
+        if (log.indexOf("SCMarket") > -1) {
+          var evalData = log.replace("<script>", "").replace("</script>", "");
+          eval(evalData);
+          module.exports.updateResourceAmount();
         }
-        else if (msg.data.indexOf("SCMarket") > -1){
-            var data = JSON.parse(msg.data);
-            var logArray = data[1].messages.log;
-            logArray.forEach(function(log){
-                if (log.indexOf("SCMarket") > -1){
-                    var evalData = log.replace('<script>', '').replace('</script>', '');
-                    eval(evalData);
-                    module.exports.updateResourceAmount();
-                }
-            });
-        }
-        else if (msg.data.indexOf("/console") > -1){
-            if (this.recievedConsole === undefined){
-                var savedDrop = localStorage.getItem('scMarketDropdown');
-                if (savedDrop !== "None"){
-                    module.exports.fetchResources();
-                }
-                
-                this.recievedConsole = true;
-            }
+      });
+    } else if (msg.data.indexOf("/console") > -1) {
+      if (this.recievedConsole === undefined) {
+        var savedDrop = localStorage.getItem("scMarketDropdown");
+        if (savedDrop !== "None") {
+          module.exports.fetchResources();
         }
 
-        //console.log(msg);
+        this.recievedConsole = true;
+      }
     }
-}
 
-module.exports.closeSocket = function(){
-    if (module.exports.socket){
-        console.log("closing socket for market")
-        module.exports.socket.close();
-    }
-}
+    //console.log(msg);
+  };
+};
 
-module.exports.getLoadingSVG = function(){
-    return `<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+module.exports.closeSocket = function () {
+  if (module.exports.socket) {
+    console.log("closing socket for market");
+    module.exports.socket.close();
+  }
+};
+
+module.exports.getLoadingSVG = function () {
+  return `<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
         <symbol id="sc-svg-loading" viewbox="0 0 100 100" width="20px" height="20px" preserveaspectratio="xMidYMid" class="uil-ellipsis">
             <circle cx="84" cy="50" fill="#fff" r="2.10574" transform="rotate(0 50 50)">
                 <animate attributename="r" begin="0s;anir14.end" dur="0.1875s" fill="freeze" from="0" id="anir11" to="8"></animate>
@@ -383,4 +387,4 @@ module.exports.getLoadingSVG = function(){
             </circle>
         </symbol>
     </svg>`;
-}
+};
