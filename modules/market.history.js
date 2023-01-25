@@ -104,23 +104,8 @@ module.exports.init = function () {
 
   module.exports.marketHistory.className = "app-market-table mat-table";
 
-  $(module.exports.marketHistory).append('<tr><td>Date</td><td>Shard</td><td>Tick</td><td>Credits</td><td>Resource</td><td>Description</td></tr>');
+  $(module.exports.marketHistory).append('<tr><td><input class="filter-input" style="width:140px" placeholder="Date"></td><td><input class="filter-input" style="width:50px" placeholder="Shard"></td><td><input class="filter-input" style="width:60px" placeholder="Tick"></td><td><input class="filter-input" style="width:80px" placeholder="Credits"></td><td><input class="filter-input" style="width:80px" placeholder="Resource"></td><td><input class="filter-input" style="width:100%" placeholder="Description"></td></tr>');
 
-  var headerCells = $('td', module.exports.marketHistory);
-
-  // Loop through each header cell
-  headerCells.each(function () {
-    // Create a new input element
-    var input = $('<input>', {
-      type: 'text',
-      class: 'filter-input',
-      style: 'width: 100%',
-      placeholder: $(this).text()
-    });
-
-    // Append the input element to the current header cell
-    $(this).html(input);
-  });
 
   const header = document.createElement("tr");
   module.exports.marketHistory.appendChild(header);
