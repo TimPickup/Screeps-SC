@@ -1,24 +1,6 @@
 {
     "modules": [
         {
-            "path": "modules/map.alliance.js",
-            "runAt":{
-                "onUpdate": "https://screeps.com/a/#!/map" 
-            },
-            "options":{
-                "image": "/options/images/map.alliance.png",
-                "config":[
-                    {
-                        "name": "background",
-                        "type":"select",
-                        "description": "Background type for players in an alliance",
-                        "options":["Color", "Image"],
-                        "defaultValue": "Color"
-                    }
-                ]
-            }
-        },
-        {
             "path": "modules/market.history.js",
             "runAt":{
                 "onCompleted": "https://screeps.com/api/user/money-history"
@@ -28,10 +10,9 @@
             }
         },
         {
-            "path": "modules/market.my.resources.js",
+            "path": "modules/market.orders.js",
             "runAt":{
-                "onUpdate": "https://screeps.com/a/#!/market/",
-                "onCompleted": "https://screeps.com/api/game/market/orders-index"
+                "onCompleted": "https://screeps.com/api/game/market/my-orders"
             },
             "options":{
                 "image": "/options/images/market.my.resources.png"
@@ -44,15 +25,6 @@
             },
             "options":{
                 "image": "/options/images/profile.gcl.png"
-            }
-        },
-        {
-            "path": "modules/rank.leaderboard.js",
-            "runAt":{
-                "onUpdate": "https://screeps.com/a/#!/rank/" 
-            },
-            "options":{
-                "image": "/options/images/rank.leaderboard.png"
             }
         },
         {
@@ -71,15 +43,6 @@
             },
             "options":{
                 "image": "/options/images/room.creep.names.png"
-            }
-        },
-        {
-            "path": "modules/world.battle.radar.js",
-            "runAt":{
-                "onUpdate": "https://screeps.com/a/#!/" 
-            },
-            "options":{
-                "image": "/options/images/world.battle.radar.png"
             }
         },
         {
