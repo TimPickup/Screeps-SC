@@ -186,6 +186,49 @@ module.exports.init = function () {
 
 };
 
+module.exports.checkPattern = function (pattern, text) {
+  // Split pattern into an array of words
+  const patternWords = pattern.split(" ");
+
+  const textAsNumber = parseFloat(text);
+
+  // Loop through each word in the pattern
+  for (let i = 0; i < patternWords.length; i++) {
+    let word = patternWords[i];
+    // check if the word starts with > or <
+    if (word.startsWith(">")) {
+      // if starts with >, get the value after >
+      let value = parseFloat(word.substring(1));
+      // check if text length is more than the value
+      if ((isNaN(textAsNumber) ? text : textAsNumber) <= value) {
+        return false;
+      }
+    } else if (word.startsWith("<")) {
+      // if starts with <, get the value after <
+      let value = parseFloat(word.substring(1));
+      // check if text length is less than the value
+      if ((isNaN(textAsNumber) ? text : textAsNumber) >= value) {
+        return false;
+      }
+    } else if (word.startsWith("!")) {
+      // if starts with !, get the value after !
+      let value = word.substring(1);
+      // check if text does not include the value
+      if (text.includes(value)) {
+        return false;
+      }
+    } else {
+      // if there is no >, < or !, check if the word is in the text
+      if (!text.includes(word)) {
+        return false;
+      }
+    }
+  }
+  // if all words are valid in the text, return true
+  return true;
+}
+
+
 module.exports.filterHistory = function () {
   // Find all mat-row elements
   var matRows = $('.mat-table .mat-row');
@@ -196,6 +239,7 @@ module.exports.filterHistory = function () {
 
     // Get the current filter input's value
     var filterValue = $(this).val().toLowerCase();
+    //if blank then skip
     if (filterValue === '') {
       return;
     }
@@ -219,11 +263,8 @@ module.exports.filterHistory = function () {
         matCellText = cell.text().toLowerCase();
       }
 
-
-      console.log(cell);
-      console.log(matCellText + ' / ' + filterValue + ' / ' + columnIndex);
       // Check if the mat-cell text contains the filter value
-      if (matCellText.indexOf(filterValue) === -1) {
+      if (!module.exports.checkPattern(filterValue, matCellText)) {
         // Hide the mat-row element
         $(this).hide();
       }
@@ -440,7 +481,7 @@ module.exports.generateHistoryHtmlRow = function (history) {
   changeCell.className = `_number mat-cell cdk-column-change mat-column-change ${history.change > 0 ? "_success" : "_fail"
     }`;
   row.appendChild(changeCell);
-  changeCell.innerHTML =
+  changeCell.innerHTML = '<span style="display:none">' + history.change + ' </span>' +
     module.exports.nFormatter(history.change) +
     '<div style="margin-right:0px !important" class="type resource-credits"></div>';
 
@@ -603,7 +644,7 @@ module.exports.playerBadge = function (playerName, badge) {
 module.exports.update = function () {
   console.log("update getting called");
 
-  if (!$('app-history').hasClass('patched')) {
+  if ($('app-history').length && !$('app-history').hasClass('patched')) {
     console.log("patch it!");
     module.exports.init();
   }
