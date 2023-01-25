@@ -64,7 +64,7 @@ module.exports.init = function () {
     }
     module.exports.intervalHandlerAutoUpdate = setInterval(function () {
       module.exports.loadNewOrders();
-    }, 30000);
+    }, 60000 + Math.random() * 10000);
 
 
   });
@@ -376,6 +376,11 @@ module.exports.fetchMarketHistoryPage = function (page, loadingFromTop = false, 
      *  ]
      *
      */
+    if (!data || error || typeof data != 'object') {
+      console.log('Error getting page', error, typeof data);
+      return;
+    }
+
     // console.log(data)
     if (!data.hasMore) {
       module.exports.loadMoreButton.disabled = true;
