@@ -1,5 +1,6 @@
 module.exports.init = function () {
   console.log("market.history.js init called");
+  $('app-history').addClass('patched');
   try {
     var userid = JSON.parse(localStorage.getItem("users.code.activeWorld"))[0]._id;
     module.exports.userId = userid;
@@ -44,6 +45,28 @@ module.exports.init = function () {
     // var element = document.getElementById(id);
     module.exports.page = 0;
     module.exports.fetchMarketHistoryPage(module.exports.page);
+
+    //initially load another load of pages bit by bit
+    if (module.exports.intervalHandlerInitial) {
+      clearInterval(module.exports.intervalHandlerInitial);
+    }
+    module.exports.intervalHandlerInitial = setInterval(function () {
+      if (module.exports.page >= 5) {
+        clearInterval(module.exports.intervalHandlerInitial);
+      } else {
+        module.exports.fetchMarketHistoryPage(++module.exports.page);
+      }
+    }, 1000);
+
+    //periodically get new data automatically
+    if (module.exports.intervalHandlerAutoUpdate) {
+      clearInterval(module.exports.intervalHandlerAutoUpdate);
+    }
+    module.exports.intervalHandlerAutoUpdate = setInterval(function () {
+      module.exports.loadNewOrders();
+    }, 30000);
+
+
   });
 
   console.log("injecting styles");
@@ -81,6 +104,24 @@ module.exports.init = function () {
 
   module.exports.marketHistory.className = "app-market-table mat-table";
 
+  $(module.exports.marketHistory).append('<tr><td>Date</td><td>Shard</td><td>Tick</td><td>Credits</td><td>Resource</td><td>Description</td></tr>');
+
+  var headerCells = $('td', module.exports.marketHistory);
+
+  // Loop through each header cell
+  headerCells.each(function () {
+    // Create a new input element
+    var input = $('<input>', {
+      type: 'text',
+      class: 'filter-input',
+      style: 'width: 100%',
+      placeholder: $(this).text()
+    });
+
+    // Append the input element to the current header cell
+    $(this).html(input);
+  });
+
   const header = document.createElement("tr");
   module.exports.marketHistory.appendChild(header);
   header.className = "mat-header-row ng-star-inserted";
@@ -116,15 +157,13 @@ module.exports.init = function () {
   header.appendChild(descriptionHeaderCell);
 
   console.log("replacing  app history with new container");
-  appHistory.parentNode.replaceChild(module.exports.container, appHistory);
+  $(appHistory).html(module.exports.container);//.parentNode.replaceChild(module.exports.container, appHistory);
 
   module.exports.loadNewerButton = document.createElement("button");
   module.exports.loadNewerButton.className = "loadButton";
   module.exports.loadNewerButton.textContent = "Load new orders";
-  module.exports.loadNewerButton.onclick = () => {
-    // TODO: handle an issue where you wait for so long that page 0..N actually contains new orders
-    module.exports.fetchMarketHistoryPage(0);
-  };
+  module.exports.loadNewerButton.onclick = module.exports.loadNewOrders;
+
   module.exports.container.appendChild(module.exports.loadNewerButton);
 
   module.exports.container.appendChild(module.exports.marketHistory);
@@ -153,7 +192,89 @@ module.exports.init = function () {
   // }
   // });
   // });
+
+  module.exports.filterInputs = $('.filter-input');
+
+  // Attach an event listener to each filter input
+  module.exports.filterInputs.on('input', module.exports.filterHistory);
+
+
 };
+
+module.exports.filterHistory = function () {
+  // Find all mat-row elements
+  var matRows = $('.mat-table .mat-row');
+
+  matRows.show();
+
+  module.exports.filterInputs.each(function () {
+
+    // Get the current filter input's value
+    var filterValue = $(this).val().toLowerCase();
+    if (filterValue === '') {
+      return;
+    }
+
+    // Find the index of the column of the current filter input
+    var columnIndex = $(this).parent().index();
+
+
+    // Loop through each mat-row element
+    matRows.each(function () {
+      var cell = $(this).find(".mat-cell").eq(columnIndex);
+      var matCellText;
+      if (columnIndex == 4) {
+        var resource = $("[class^='type market-resource--']", cell);
+        if (resource.length) {
+          matCellText = resource.attr('class').substring(21).toLowerCase();
+        } else {
+          matCellText = 'N/A';
+        }
+      } else {
+        matCellText = cell.text().toLowerCase();
+      }
+
+
+      console.log(cell);
+      console.log(matCellText + ' / ' + filterValue + ' / ' + columnIndex);
+      // Check if the mat-cell text contains the filter value
+      if (matCellText.indexOf(filterValue) === -1) {
+        // Hide the mat-row element
+        $(this).hide();
+      }
+    });
+
+  });
+}
+
+
+module.exports.loadNewOrdersNextPage = function () {
+  module.exports.fetchMarketHistoryPage(module.exports.loadNewOrdersPage++, true, () => {
+    console.log('looking at more pages to try to reach something we have seen before');
+    //we didnt hit any existing orders.. load some more in a bit
+
+    if (module.exports.intervalHandlerLoadNewOrders) {
+      clearTimeout(module.exports.intervalHandlerLoadNewOrders);
+      module.exports.intervalHandlerLoadNewOrders = false;
+    }
+
+    if (module.exports.loadNewOrdersPage < 5) {
+      //load the next page after a second up to 5 pages
+      module.exports.intervalHandlerLoadNewOrders = setTimeout(module.exports.intervalHandlerLoadNewOrders, 1000);
+    } else {
+      console.log('giving up looking for most recent stuff.. too much gone on');
+    }
+
+
+  });
+}
+
+module.exports.loadNewOrders = function () {
+  //handle an issue where you wait for so long that page 0..N actually contains new orders
+  module.exports.loadNewOrdersPage = 0;
+  module.exports.loadNewOrdersNextPage();
+};
+
 
 module.exports.fetchPlayer = function (id, history) {
   module.ajaxGet("https://screeps.com/api/user/find?id=" + id, function (data, error) {
@@ -192,6 +313,7 @@ module.exports.fetchPlayer = function (id, history) {
     ) {
       module.exports.insertRow(history);
       module.exports.sortTable();
+      module.exports.filterHistory();
     }
   });
 };
@@ -231,7 +353,7 @@ module.exports.sortTable = function () {
   }
 };
 
-module.exports.fetchMarketHistoryPage = function (page) {
+module.exports.fetchMarketHistoryPage = function (page, loadingFromTop = false, callbackOnNoDuplicate = undefined) {
   console.log(`Fetching page ${page}`);
   module.ajaxGet("https://screeps.com/api/user/money-history?page=" + page, function (data, error) {
     /**
@@ -259,6 +381,8 @@ module.exports.fetchMarketHistoryPage = function (page) {
       module.exports.loadMoreButton.disabled = true;
     }
 
+    var skipped = false;
+
     for (const history of data.list) {
       let missingPlayer = false;
       if (history.market && history.market.dealer && !module.exports.players[history.market.dealer]) {
@@ -272,10 +396,20 @@ module.exports.fetchMarketHistoryPage = function (page) {
       }
 
       if (!missingPlayer) {
-        module.exports.insertRow(history);
+        if (!module.exports.insertRow(history) && loadingFromTop) {
+          console.log('skipping the rest');
+          skipped = true;
+          break; //got to a dupe
+        }
       }
     }
     module.exports.sortTable();
+
+    if (loadingFromTop && !skipped && callbackOnNoDuplicate && typeof callbackOnNoDuplicate == 'function') {
+      callbackOnNoDuplicate();
+    }
+
+    module.exports.filterHistory();
 
     // module.exports.update();
   });
@@ -284,11 +418,12 @@ module.exports.fetchMarketHistoryPage = function (page) {
 module.exports.insertRow = function (history) {
   if (document.getElementById(history._id)) {
     console.log(history._id, "found skipping");
-    return;
+    return false;
   }
 
   const row = module.exports.generateHistoryHtmlRow(history);
   module.exports.marketHistory.appendChild(row);
+  return true;
 };
 
 module.exports.generateHistoryHtmlRow = function (history) {
@@ -312,18 +447,16 @@ module.exports.generateHistoryHtmlRow = function (history) {
   row.appendChild(tickCell);
 
   const changeCell = document.createElement("td");
-  changeCell.className = `_number mat-cell cdk-column-change mat-column-change ${
-    history.change > 0 ? "_success" : "_fail"
-  }`;
+  changeCell.className = `_number mat-cell cdk-column-change mat-column-change ${history.change > 0 ? "_success" : "_fail"
+    }`;
   row.appendChild(changeCell);
   changeCell.innerHTML =
     module.exports.nFormatter(history.change) +
     '<div style="margin-right:0px !important" class="type resource-credits"></div>';
 
   const resourceCell = document.createElement("td");
-  resourceCell.className = `_number mat-cell cdk-column-change mat-column-change ${
-    history.type == "market.buy" ? "_success" : "_fail"
-  }`;
+  resourceCell.className = `_number mat-cell cdk-column-change mat-column-change ${history.type == "market.buy" ? "_success" : "_fail"
+    }`;
   row.appendChild(resourceCell);
 
   const descriptionCell = document.createElement("td");
@@ -335,9 +468,9 @@ module.exports.generateHistoryHtmlRow = function (history) {
   dateCell.innerHTML = `${date.getDate().toString().padStart(2, "0")}-${(date.getMonth() + 1)
     .toString()
     .padStart(2, "0")}-${date.getFullYear() + 1} ${date.getHours().toString().padStart(2, "0")}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
   shardCell.innerHTML = history.shard;
   tickCell.innerHTML = history.tick;
 
@@ -382,9 +515,8 @@ module.exports.generateHistoryHtmlRow = function (history) {
           ? `${module.exports.nFormatter(market.remainingAmount)} remaining`
           : `${module.exports.nFormatter(market.totalAmount)} total`;
 
-        descriptionCell.innerHTML = `${roomLink} Market fee (${
-          market.type
-        }) ${amount} ${resourceIcon} (${module.exports.nFormatter(market.price)}) ${infoCircle}`;
+        descriptionCell.innerHTML = `${roomLink} Market fee (${market.type
+          }) ${amount} ${resourceIcon} (${module.exports.nFormatter(market.price)}) ${infoCircle}`;
       }
     } else if (history.type == "market.buy" || history.type == "market.sell") {
       var market = history.market;
@@ -480,6 +612,11 @@ module.exports.playerBadge = function (playerName, badge) {
 
 module.exports.update = function () {
   console.log("update getting called");
+
+  if (!$('app-history').hasClass('patched')) {
+    console.log("patch it!");
+    module.exports.init();
+  }
 };
 
 module.exports.nFormatter = function (num, digits = 2) {
