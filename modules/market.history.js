@@ -390,10 +390,13 @@ module.exports.sortTable = function () {
 };
 
 module.exports.updateStatus = function (text) {
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
   var date = new Date();
   var dateStr =
-    ("00" + (date.getMonth() + 1)).slice(-2) + "/" +
-    ("00" + date.getDate()).slice(-2) + "/" +
+    ("00" + date.getDate()).slice(-2) + " " +
+    monthNames[date.getMonth()] + " " +
     date.getFullYear() + " " +
     ("00" + date.getHours()).slice(-2) + ":" +
     ("00" + date.getMinutes()).slice(-2) + ":" +
