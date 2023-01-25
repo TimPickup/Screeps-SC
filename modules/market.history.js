@@ -1,5 +1,17 @@
+module.exports.isVisible = true;
 module.exports.init = function () {
   console.log("market.history.js init called");
+
+  document.addEventListener('visibilitychange', function (event) {
+    if (document.hidden) {
+      console.log('not visible');
+      module.exports.isVisible = false;
+    } else {
+      console.log('is visible');
+      module.exports.isVisible = true;
+    }
+  });
+
   $('app-history').addClass('patched');
   try {
     var userid = JSON.parse(localStorage.getItem("users.code.activeWorld"))[0]._id;
@@ -51,7 +63,7 @@ module.exports.init = function () {
       clearInterval(module.exports.intervalHandlerInitial);
     }
     module.exports.intervalHandlerInitial = setInterval(function () {
-      if (module.exports.page >= 5) {
+      if (module.exports.page >= 30) {
         clearInterval(module.exports.intervalHandlerInitial);
       } else {
         module.exports.fetchMarketHistoryPage(++module.exports.page);
@@ -63,7 +75,9 @@ module.exports.init = function () {
       clearInterval(module.exports.intervalHandlerAutoUpdate);
     }
     module.exports.intervalHandlerAutoUpdate = setInterval(function () {
-      module.exports.loadNewOrders();
+      if (module.exports.isVisible) {
+        module.exports.loadNewOrders();
+      }
     }, 60000 + Math.random() * 10000);
 
 
