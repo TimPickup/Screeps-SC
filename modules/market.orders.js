@@ -30,6 +30,49 @@ module.exports.update = function () {
 	module.exports.createFilters();
 };
 
+module.exports.checkPattern = function (pattern, text) {
+	// Split pattern into an array of words
+	const patternWords = pattern.split(" ");
+
+	const textAsNumber = parseFloat(text.replace(/\,/g, ''));
+
+	// Loop through each word in the pattern
+	for (let i = 0; i < patternWords.length; i++) {
+		let word = patternWords[i];
+		// check if the word starts with > or <
+		if (word.startsWith(">")) {
+			// if starts with >, get the value after >
+			let value = parseFloat(word.substring(1));
+			// check if text length is more than the value
+			if ((isNaN(textAsNumber) ? text : textAsNumber) <= value) {
+				return false;
+			}
+		} else if (word.startsWith("<")) {
+			// if starts with <, get the value after <
+			let value = parseFloat(word.substring(1));
+			// check if text length is less than the value
+			if ((isNaN(textAsNumber) ? text : textAsNumber) >= value) {
+				return false;
+			}
+		} else if (word.startsWith("!")) {
+			// if starts with !, get the value after !
+			let value = word.substring(1);
+			// check if text does not include the value
+			if (text.includes(value)) {
+				return false;
+			}
+		} else {
+			// if there is no >, < or !, check if the word is in the text
+			if (!text.includes(word)) {
+				return false;
+			}
+		}
+	}
+	// if all words are valid in the text, return true
+	return true;
+}
+
+
 module.exports.createFilters = function () {
 
 	//get rid of stupid max height.. the browser has its own scroll bar!
@@ -84,10 +127,8 @@ module.exports.createFilters = function () {
 				}
 
 
-				console.log(cell);
-				console.log(matCellText + ' / ' + filterValue + ' / ' + columnIndex);
 				// Check if the mat-cell text contains the filter value
-				if (matCellText.indexOf(filterValue) === -1) {
+				if (!module.exports.checkPattern(filterValue, matCellText)) {
 					// Hide the mat-row element
 					$(this).hide();
 				}
