@@ -19,6 +19,15 @@ module.exports.init = function () {
 
 	console.log("Found userId", module.exports.userId);
 
+	console.log("injecting styles");
+	var style = ".app-market-table mat-row:not([style*=\"display: none\"]):nth-of-type(2n+1) { background-color: rgba(255, 255, 255, 0.02); }";
+	style += ".app-market-table mat-row:not([style*=\"display: none\"]):nth-of-type(2n) { background-color: transparent; }";
+	style += "hidden { display: none; }";
+
+
+	$('<style type="text/css">' + style + '</style>').appendTo("head");
+
+
 
 	module.exports.createFilters();
 
@@ -99,10 +108,10 @@ module.exports.createFilters = function () {
 
 	// Attach an event listener to each filter input
 	filterInputs.on('input', function () {
+		$('hidden mat-row').unwrap();
+
 		// Find all mat-row elements
 		var matRows = $('mat-table mat-row');
-
-		matRows.show();
 
 		filterInputs.each(function () {
 
@@ -130,7 +139,7 @@ module.exports.createFilters = function () {
 				// Check if the mat-cell text contains the filter value
 				if (!module.exports.checkPattern(filterValue, matCellText)) {
 					// Hide the mat-row element
-					$(this).hide();
+					$(this).wrap('<hidden>');
 				}
 			});
 

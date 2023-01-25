@@ -85,7 +85,7 @@ module.exports.init = function () {
 
   console.log("injecting styles");
   var style = document.createElement("style");
-  style.innerHTML = ".mat-row:nth-of-type(2n+1) { background-color: rgba(255, 255, 255, 0.02); }";
+  style.innerHTML = ".mat-row:not([style*=\"display: none\"]):nth-of-type(2n+1) { background-color: rgba(255, 255, 255, 0.02); }";
   style.innerHTML +=
     ".loadButton {place-items: center;margin: 0 20px;border: none;background: transparent;color: #4A5FD2;font-size: 12px;font-weight: 600;line-height: 26px;text-transform: uppercase;}";
   style.innerHTML += "._success {color: #80D47B;}";
@@ -93,6 +93,7 @@ module.exports.init = function () {
   style.innerHTML += "._number {text-align:right;}";
   style.innerHTML +=
     ".type {display:inline-block; vertical-align: middle; width: 25px;min-height: 37px;text-align: center;background-repeat: no-repeat;}";
+  style.innerHTML += "hidden { display: none; }";
 
   document.head.appendChild(style);
 
@@ -239,10 +240,10 @@ module.exports.checkPattern = function (pattern, text) {
 
 
 module.exports.filterHistory = function () {
+  $('hidden .mat-row').unwrap();
+
   // Find all mat-row elements
   var matRows = $('.mat-table .mat-row');
-
-  matRows.show();
 
   module.exports.filterInputs.each(function () {
 
@@ -275,7 +276,7 @@ module.exports.filterHistory = function () {
       // Check if the mat-cell text contains the filter value
       if (!module.exports.checkPattern(filterValue, matCellText)) {
         // Hide the mat-row element
-        $(this).hide();
+        $(this).wrap('<hidden>');
       }
     });
 
