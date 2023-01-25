@@ -78,7 +78,7 @@ module.exports.init = function () {
       if (module.exports.isVisible) {
         module.exports.loadNewOrders();
       }
-    }, 60000 + Math.random() * 10000);
+    }, 30000 + Math.random() * 10000);
 
 
   });
@@ -158,12 +158,7 @@ module.exports.init = function () {
   console.log("replacing  app history with new container");
   $(appHistory).html(module.exports.container);//.parentNode.replaceChild(module.exports.container, appHistory);
 
-  module.exports.loadNewerButton = document.createElement("button");
-  module.exports.loadNewerButton.className = "loadButton";
-  module.exports.loadNewerButton.textContent = "Load new orders";
-  module.exports.loadNewerButton.onclick = module.exports.loadNewOrders;
-
-  module.exports.container.appendChild(module.exports.loadNewerButton);
+  $(module.exports.container).append(('<p style="color: #fff; text-align: left"><strong>NOTE:</strong> Auto loads new orders.<br><strong>Status:</strong> <span id="historyStatus"></span></p>'));
 
   module.exports.container.appendChild(module.exports.marketHistory);
 
@@ -298,11 +293,12 @@ module.exports.loadNewOrdersNextPage = function () {
       module.exports.intervalHandlerLoadNewOrders = false;
     }
 
-    if (module.exports.loadNewOrdersPage < 5) {
-      //load the next page after a second up to 5 pages
+    if (module.exports.loadNewOrdersPage < 15) {
+      //load the next page after a second up to 15 pages
       module.exports.intervalHandlerLoadNewOrders = setTimeout(module.exports.intervalHandlerLoadNewOrders, 1000);
     } else {
       console.log('giving up looking for most recent stuff.. too much gone on');
+      module.exports.updateStatus('ERROR could not load everything up to current date');
     }
 
 
@@ -393,8 +389,25 @@ module.exports.sortTable = function () {
   }
 };
 
+module.exports.updateStatus = function (text) {
+  var date = new Date();
+  var dateStr =
+    ("00" + (date.getMonth() + 1)).slice(-2) + "/" +
+    ("00" + date.getDate()).slice(-2) + "/" +
+    date.getFullYear() + " " +
+    ("00" + date.getHours()).slice(-2) + ":" +
+    ("00" + date.getMinutes()).slice(-2) + ":" +
+    ("00" + date.getSeconds()).slice(-2);
+  $('#historyStatus').html(dateStr + ': ' + text);
+}
+
 module.exports.fetchMarketHistoryPage = function (page, loadingFromTop = false, callbackOnNoDuplicate = undefined) {
   console.log(`Fetching page ${page}`);
+  if (loadingFromTop) {
+    module.exports.updateStatus('Getting new orders');
+  } else {
+    module.exports.updateStatus('Loading Page ' + (page + 1));
+  }
   module.ajaxGet("https://screeps.com/api/user/money-history?page=" + page, function (data, error) {
     /**
      * data
@@ -418,7 +431,13 @@ module.exports.fetchMarketHistoryPage = function (page, loadingFromTop = false, 
      */
     if (!data || error || typeof data != 'object') {
       console.log('Error getting page', error, typeof data);
+      module.exports.updateStatus('ERROR Loading Page ' + (page + 1) + ' : ' + error);
       return;
+    }
+    if (loadingFromTop) {
+      module.exports.updateStatus('Fetched new orders');
+    } else {
+      module.exports.updateStatus('Loaded Page ' + (page + 1));
     }
 
     // console.log(data)
