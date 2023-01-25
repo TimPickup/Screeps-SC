@@ -295,7 +295,7 @@ module.exports.loadNewOrdersNextPage = function () {
 
     if (module.exports.loadNewOrdersPage < 15) {
       //load the next page after a second up to 15 pages
-      module.exports.intervalHandlerLoadNewOrders = setTimeout(module.exports.intervalHandlerLoadNewOrders, 1000);
+      module.exports.intervalHandlerLoadNewOrders = setTimeout(module.exports.loadNewOrdersNextPage, 1000);
     } else {
       console.log('giving up looking for most recent stuff.. too much gone on');
       module.exports.updateStatus('ERROR could not load everything up to current date');
@@ -405,6 +405,11 @@ module.exports.updateStatus = function (text) {
 }
 
 module.exports.fetchMarketHistoryPage = function (page, loadingFromTop = false, callbackOnNoDuplicate = undefined) {
+  if (!module.exports.isOnHistoryPage()) {
+    console.log('Not on history page so dont fetch records');
+    return;
+  }
+
   console.log(`Fetching page ${page}`);
   if (loadingFromTop) {
     module.exports.updateStatus('Getting new orders');
@@ -677,10 +682,14 @@ module.exports.playerBadge = function (playerName, badge) {
           </app-badge>`;
 };
 
-module.exports.update = function () {
-  console.log("update getting called");
+module.exports.isOnHistoryPage = function () {
+  return $('app-history').length;
+}
 
-  if ($('app-history').length && !$('app-history').hasClass('patched')) {
+module.exports.update = function () {
+  console.log("update getting called on history");
+
+  if (module.exports.isOnHistoryPage() && !$('app-history').hasClass('patched')) {
     console.log("patch it!");
     module.exports.init();
   }
